@@ -11,7 +11,7 @@ int main(void) {
     std::vector<std::string> initsound;
     while(!fs.eof()){
         getline(fs,str_buf,',');
-        std::cout<<str_buf<<std::endl;        
+        std::cout<<str_buf<<std::endl;  
     }
     return 0;
 }

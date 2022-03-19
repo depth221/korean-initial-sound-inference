@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include "sqlite3/sqlite3.h"
 #include "parseSounds.hpp"
@@ -15,6 +16,7 @@ class initial_sound_sqlite3 {
     public:
     int open_db(const char* filename);
     int exec_sql(const char* sql, void* value);
+    int compare_initsound(std::vector<int>& char_sounds_code);
     static int callback_select(void* NotUsed, int argc, char** argv, char** azColName);
 };
 
@@ -39,6 +41,16 @@ int initial_sound_sqlite3::exec_sql(const char* sql, void* value) {
         
         return -1;
     }
+}
+
+int initial_sound_sqlite3::compare_initsound(std::vector<int>& char_sounds_code) {
+    std::stringstream sql_stringstream;
+    std::string str_sound_code;
+
+    unicodeToUtf8(char_sounds_code, str_sound_code);
+
+    sql_stringstream << "SELECT * FROM noun WHERE initsound = " << str_sound_code;
+    this->exec_sql(sql_stringstream.str().c_str(), 0);
 }
 
 int initial_sound_sqlite3::callback_select(void* NotUsed, int argc, char** argv, char** azColName) {
@@ -81,7 +93,10 @@ int main() {
         return -1;
     if (korean_db.exec_sql("SELECT * FROM noun", 0) != 0)
         return -1;
-        
-
+    
+    std::string tmp_str;
+    unicodeToUtf8(input_str_unicode, tmp_str);
+    std::cerr << tmp_str << std::endl;
+    //korean_db.compare_initsound(input_str_unicode);
     return 0;
 }

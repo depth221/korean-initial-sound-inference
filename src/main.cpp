@@ -15,7 +15,7 @@ class initial_sound_sqlite3 {
     sqlite3_stmt* res;
     char* err_msg = 0;
     int rc = 0;
-    std::string input_str;
+    //std::string input_str;
     std::string input_str_initsound;
     std::vector<int> input_str_unicode;
 
@@ -26,7 +26,7 @@ class initial_sound_sqlite3 {
     int convertInitSound();
     int open_db(const char* filename);
     int exec_sql(const char* sql, void* value);
-    int compare_initsound();
+    int find_initsound();
     static int callback_select(void* param, int argc, char** argv, char** azColName);
 };
 
@@ -34,15 +34,16 @@ initial_sound_sqlite3::initial_sound_sqlite3(const char* filename) {
     initial_sound_sqlite3(filename, "테스트");
 }
 
-initial_sound_sqlite3::initial_sound_sqlite3(const char* filename, const std::string& input_str) {
-    this->input_str = input_str;
+initial_sound_sqlite3::initial_sound_sqlite3(const char* filename, const std::string& input_str_initsound) {
+    //this->input_str = input_str;
+    this->input_str_initsound = input_str_initsound;
     this->open_db(filename);
     this->utf8ToUnicode();
-    this->convertInitSound();
+    //this->convertInitSound();
 }
 
 int initial_sound_sqlite3::utf8ToUnicode() {
-    return parseSounds::utf8ToUnicode(this->input_str, (this->input_str).size(), this->input_str_unicode);
+    return parseSounds::utf8ToUnicode(this->input_str_initsound, (this->input_str_initsound).size(), this->input_str_unicode);
 }
 
 int initial_sound_sqlite3::convertInitSound() {
@@ -93,25 +94,31 @@ int initial_sound_sqlite3::exec_sql(const char* sql, void* value) {
     return 0;
 }
 
-int initial_sound_sqlite3::compare_initsound() {
+int initial_sound_sqlite3::find_initsound() {
     std::stringstream sql_stringstream;
 
-    sql_stringstream << "SELECT * FROM noun WHERE initsound = '" << this->input_str_initsound << "';";
+    sql_stringstream << "SELECT DISTINCT word FROM noun WHERE initsound = '" << this->input_str_initsound << "' ORDER BY rank;";
     this->exec_sql(sql_stringstream.str().c_str(), 0);
     return 0;
 }
 
 int initial_sound_sqlite3::callback_select(void* param, int argc, char** argv, char** azColName) {
     for (int i = 0; i < argc; i++) {
-        std::cout << azColName[i] << ": " << argv[i] << "\n";
+        //if (i == 2)
+            //std::cout << azColName[i] << ": " << argv[i] << "\n";
+            std::cout << argv[i];
     }
     std::cout << "\n";
     return 0;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     std::string input_str;
-    getline(std::cin, input_str);
+    if (argc == 2) {
+        input_str += argv[1];
+    } else {
+        getline(std::cin, input_str);
+    }
     
     // open DB
     initial_sound_sqlite3 korean_db("../db/kr_korean.db", input_str);
@@ -126,6 +133,6 @@ int main() {
     //}
         
     
-    korean_db.compare_initsound();
+    korean_db.find_initsound();
     return 0;
 }

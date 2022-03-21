@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <iostream>
 #include <cstring>
 #include <vector>
+#include <list>
 #include <string>
 #include <sstream>
 
@@ -8,6 +10,7 @@
 #include "parseSounds.hpp"
 
 short hangul_jamo_table[] = {1, 2, 4, 7, 8, 9, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}; // ㄱ, ㄲ, ㄴ, ㄷ, ㄸ, ㄹ, ㅁ, ㅂ, ㅃ, ㅅ, ㅆ, ㅇ, ㅈ, ㅉ, ㅊ, ㅋ, ㅌ, ㅍ, ㅎ
+char punctuation_mark[] = {'.', ',', '?', '!', '~', ':'};
 
 class initial_sound_sqlite3 {
     private:
@@ -15,14 +18,18 @@ class initial_sound_sqlite3 {
     sqlite3_stmt* res;
     char* err_msg = 0;
     int rc = 0;
-    //std::string input_str;
     std::string input_str_initsound;
     std::vector<int> input_str_unicode;
+
+    std::vector<std::string> input_str_per_word;
+    std::vector<bool> input_str_is_hangul;
+    std::vector<bool> input_str_is_before_space;
 
     public:
     initial_sound_sqlite3(const char* filename);
     initial_sound_sqlite3(const char* filename, const std::string& input_str);
     int utf8ToUnicode();
+    int split_per_word();
     int convertInitSound();
     int open_db(const char* filename);
     int exec_sql(const char* sql, void* value);
@@ -39,11 +46,112 @@ initial_sound_sqlite3::initial_sound_sqlite3(const char* filename, const std::st
     this->input_str_initsound = input_str_initsound;
     this->open_db(filename);
     this->utf8ToUnicode();
-    //this->convertInitSound();
 }
 
 int initial_sound_sqlite3::utf8ToUnicode() {
     return parseSounds::utf8ToUnicode(this->input_str_initsound, (this->input_str_initsound).size(), this->input_str_unicode);
+}
+
+int initial_sound_sqlite3::split_per_word() {
+    std::list<std::string> tmp_input_str_per_word;
+    std::list<bool> tmp_input_str_is_hangul;
+    std::list<bool> tmp_input_str_is_punc;
+    std::string tmp_str = "";
+    int lang_mode = 0; // 0: Hangul, 1: Latin Script or etc., 2: space, 3: punctuation mark
+
+    for (char character : input_str_initsound) {
+        if (parseSounds::isHangul(character)) {
+            if (lang_mode == 0) {
+                tmp_str += character;
+            } else if (lang_mode == 1) {
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(false);
+                tmp_input_str_is_punc.push_back(false);
+                tmp_str = character;
+            } else if (lang_mode == 2) {
+                tmp_str = character;
+            } else { // lang_mode == 3
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(false);
+                tmp_input_str_is_punc.push_back(true);
+                tmp_str = character;
+            }
+            lang_mode = 0;
+        } else if (character == ' ') {
+            if (lang_mode == 2) { // succesive spaces
+                continue;
+            } else if (lang_mode == 0) {
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(true);
+                tmp_input_str_is_punc.push_back(false);
+                tmp_str = "";
+            } else if (lang_mode == 1) {
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(false);
+                tmp_input_str_is_punc.push_back(false);
+                tmp_str = "";
+            } else { // lang_mode == 3
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(false);
+                tmp_input_str_is_punc.push_back(true);
+                tmp_str = "";
+            }
+            lang_mode = 2;
+        } else if (std::find(punctuation_mark, punctuation_mark + (sizeof(punctuation_mark) / sizeof(char)), character) != \
+                                               punctuation_mark + (sizeof(punctuation_mark) / sizeof(char))) { // is a punctuation mark
+            if (lang_mode == 0) {
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(true);
+                tmp_input_str_is_punc.push_back(false);
+                tmp_str = character;
+            } else if (lang_mode == 1) {
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(false);
+                tmp_input_str_is_punc.push_back(false);
+                tmp_str = character;
+            } else if (lang_mode == 2) {
+                tmp_str = character;
+            } else { // lang_mode == 3
+                tmp_str += character;
+            }
+            lang_mode = 3;
+        } else { // Latin Script or etc.
+            if (lang_mode == 0) {
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(true);
+                tmp_input_str_is_punc.push_back(false);
+                tmp_str = character;
+            } else if (lang_mode == 1) {
+                tmp_str += character;
+            } else if (lang_mode == 2) {
+                tmp_str = character;
+            } else { // lang_mode == 3
+                tmp_input_str_per_word.push_back(tmp_str);
+                tmp_input_str_is_hangul.push_back(false);
+                tmp_input_str_is_punc.push_back(true);
+                tmp_str = character;
+            }
+            lang_mode = 1;
+        }
+    }
+
+    if (lang_mode == 0) {
+        tmp_input_str_per_word.push_back(tmp_str);
+        tmp_input_str_is_hangul.push_back(true);
+        tmp_input_str_is_punc.push_back(false);
+    } else if (lang_mode == 1) {
+        tmp_input_str_per_word.push_back(tmp_str);
+        tmp_input_str_is_hangul.push_back(false);
+        tmp_input_str_is_punc.push_back(false);
+    } else if (lang_mode == 2) {
+
+    } else { // lang_mode == 3
+        tmp_input_str_per_word.push_back(tmp_str);
+        tmp_input_str_is_hangul.push_back(false);
+        tmp_input_str_is_punc.push_back(true);
+    }
+
+    return 0;
 }
 
 int initial_sound_sqlite3::convertInitSound() {
@@ -66,7 +174,7 @@ int initial_sound_sqlite3::convertInitSound() {
         std::cerr << tmp_input_one_str;
     }
 
-    //std::cout << input_str_initsound;
+    return 0;
 }
 
 int initial_sound_sqlite3::open_db(const char* filename) {
@@ -79,6 +187,8 @@ int initial_sound_sqlite3::open_db(const char* filename) {
         
         return -1;
     }
+
+    return 0;
 }
 
 int initial_sound_sqlite3::exec_sql(const char* sql, void* value) {
@@ -134,5 +244,6 @@ int main(int argc, char* argv[]) {
         
     
     korean_db.find_initsound();
+    korean_db.split_per_word();
     return 0;
 }

@@ -3,6 +3,8 @@
 #include <vector>
 #include <iostream>
 
+#include "parseSounds.hpp"
+
 namespace parseSounds {
     int utf8ToUnicode(const std::string& utf8_str, int size_of_utf8, std::vector<int>& unicode_str_vec) {
         std::list<int> unicode_str;
@@ -87,13 +89,15 @@ namespace parseSounds {
 
             utf8_str.append(tmp_char);
         }
+
+        return 0;
     }
 
     int parseSounds(int character, int* sounds_code, int size) {
         if (size != 3 * sizeof(int))
             return -1;
 
-        if (character < 0xAC00 || character > 0xD79F) { // Not Hangul
+        if (!isHangul(character)) { // Not Hangul
             return -1;
         } else {
             sounds_code[0] = ((character - 0xAC00) / 28) / 21;

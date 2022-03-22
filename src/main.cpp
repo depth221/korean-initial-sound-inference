@@ -63,7 +63,6 @@ int initial_sound_sqlite3::split_per_word() {
     int lang_mode = 0; // 0: Hangul, 1: Latin Script or etc., 2: space, 3: punctuation mark
 
     for (int char_code : input_str_unicode) {
-        std::cout << "char_code: " << char_code;
         if (parseSounds::isHangul(char_code)) { // Hangul (0)
             if (lang_mode == 0) {
                 
@@ -168,7 +167,7 @@ int initial_sound_sqlite3::split_per_word() {
                 tmp_input_str_unicode_is_hangul.push_back(true);
                 tmp_input_str_unicode_is_punc.push_back(false);
             } else if (lang_mode == 1) {
-                
+
             } else if (lang_mode == 2) {
 
             } else { // lang_mode == 3
@@ -185,8 +184,6 @@ int initial_sound_sqlite3::split_per_word() {
             tmp_input_str_unicode_per_word.push_back(char_code);
             lang_mode = 1;
         }
-
-        std::cout << "lang_mode: " << lang_mode;
     }
 
     if (lang_mode == 0) {
@@ -216,6 +213,8 @@ int initial_sound_sqlite3::split_per_word() {
         tmp_input_str_unicode_is_hangul.push_back(false);
         tmp_input_str_unicode_is_punc.push_back(true);
     }
+
+    std::cout << this->word_count;
 
     for (auto i : input_str_per_word) {
         std::string tmp_str;
@@ -320,6 +319,5 @@ int main(int argc, char* argv[]) {
         
     
     korean_db.find_initsound();
-    korean_db.split_per_word();
     return 0;
 }

@@ -21,7 +21,8 @@ class initial_sound_sqlite3 {
     std::string input_str_initsound;
     std::vector<int> input_str_unicode;
 
-    std::vector<std::string> input_str_per_word;
+    int word_count = 0;
+    std::vector<std::vector<int>> input_str_per_word;
     std::vector<bool> input_str_is_hangul;
     std::vector<bool> input_str_is_before_space;
 
@@ -46,6 +47,7 @@ initial_sound_sqlite3::initial_sound_sqlite3(const char* filename, const std::st
     this->input_str_initsound = input_str_initsound;
     this->open_db(filename);
     this->utf8ToUnicode();
+    this->split_per_word();
 }
 
 int initial_sound_sqlite3::utf8ToUnicode() {
@@ -53,102 +55,176 @@ int initial_sound_sqlite3::utf8ToUnicode() {
 }
 
 int initial_sound_sqlite3::split_per_word() {
-    std::list<std::string> tmp_input_str_per_word;
-    std::list<bool> tmp_input_str_is_hangul;
-    std::list<bool> tmp_input_str_is_punc;
+    std::list<int> tmp_input_str_unicode_per_word;
+    std::vector<int> tmp_input_str_unicode_per_word_vec;
+    std::list<bool> tmp_input_str_unicode_is_hangul;
+    std::list<bool> tmp_input_str_unicode_is_punc;
     std::string tmp_str = "";
     int lang_mode = 0; // 0: Hangul, 1: Latin Script or etc., 2: space, 3: punctuation mark
 
-    for (char character : input_str_initsound) {
-        if (parseSounds::isHangul(character)) {
+    for (int char_code : input_str_unicode) {
+        std::cout << "char_code: " << char_code;
+        if (parseSounds::isHangul(char_code)) { // Hangul (0)
             if (lang_mode == 0) {
-                tmp_str += character;
+                
             } else if (lang_mode == 1) {
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(false);
-                tmp_input_str_is_punc.push_back(false);
-                tmp_str = character;
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(false);
+                tmp_input_str_unicode_is_punc.push_back(false);
             } else if (lang_mode == 2) {
-                tmp_str = character;
+
             } else { // lang_mode == 3
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(false);
-                tmp_input_str_is_punc.push_back(true);
-                tmp_str = character;
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(false);
+                tmp_input_str_unicode_is_punc.push_back(true);
             }
+            tmp_input_str_unicode_per_word.push_back(char_code);
             lang_mode = 0;
-        } else if (character == ' ') {
+        } else if (char_code == static_cast<int>(' ')) { // space
             if (lang_mode == 2) { // succesive spaces
                 continue;
             } else if (lang_mode == 0) {
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(true);
-                tmp_input_str_is_punc.push_back(false);
-                tmp_str = "";
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(true);
+                tmp_input_str_unicode_is_punc.push_back(false);
             } else if (lang_mode == 1) {
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(false);
-                tmp_input_str_is_punc.push_back(false);
-                tmp_str = "";
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(false);
+                tmp_input_str_unicode_is_punc.push_back(false);
             } else { // lang_mode == 3
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(false);
-                tmp_input_str_is_punc.push_back(true);
-                tmp_str = "";
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(false);
+                tmp_input_str_unicode_is_punc.push_back(true);
             }
             lang_mode = 2;
-        } else if (std::find(punctuation_mark, punctuation_mark + (sizeof(punctuation_mark) / sizeof(char)), character) != \
+        } else if (std::find(punctuation_mark, punctuation_mark + (sizeof(punctuation_mark) / sizeof(char)), char_code) != \
                                                punctuation_mark + (sizeof(punctuation_mark) / sizeof(char))) { // is a punctuation mark
             if (lang_mode == 0) {
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(true);
-                tmp_input_str_is_punc.push_back(false);
-                tmp_str = character;
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(true);
+                tmp_input_str_unicode_is_punc.push_back(false);
             } else if (lang_mode == 1) {
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(false);
-                tmp_input_str_is_punc.push_back(false);
-                tmp_str = character;
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(false);
+                tmp_input_str_unicode_is_punc.push_back(false);
             } else if (lang_mode == 2) {
-                tmp_str = character;
+
             } else { // lang_mode == 3
-                tmp_str += character;
+
             }
+            tmp_input_str_unicode_per_word.push_back(char_code);
             lang_mode = 3;
         } else { // Latin Script or etc.
             if (lang_mode == 0) {
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(true);
-                tmp_input_str_is_punc.push_back(false);
-                tmp_str = character;
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(true);
+                tmp_input_str_unicode_is_punc.push_back(false);
             } else if (lang_mode == 1) {
-                tmp_str += character;
+                
             } else if (lang_mode == 2) {
-                tmp_str = character;
+
             } else { // lang_mode == 3
-                tmp_input_str_per_word.push_back(tmp_str);
-                tmp_input_str_is_hangul.push_back(false);
-                tmp_input_str_is_punc.push_back(true);
-                tmp_str = character;
+                this->word_count += 1;
+                tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+                std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+                input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+                tmp_input_str_unicode_per_word.clear();
+                tmp_input_str_unicode_per_word_vec.clear();
+
+                tmp_input_str_unicode_is_hangul.push_back(false);
+                tmp_input_str_unicode_is_punc.push_back(true);
             }
+            tmp_input_str_unicode_per_word.push_back(char_code);
             lang_mode = 1;
         }
+
+        std::cout << "lang_mode: " << lang_mode;
     }
 
     if (lang_mode == 0) {
-        tmp_input_str_per_word.push_back(tmp_str);
-        tmp_input_str_is_hangul.push_back(true);
-        tmp_input_str_is_punc.push_back(false);
+        this->word_count += 1;
+        tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+        std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+        input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+
+        tmp_input_str_unicode_is_hangul.push_back(true);
+        tmp_input_str_unicode_is_punc.push_back(false);
     } else if (lang_mode == 1) {
-        tmp_input_str_per_word.push_back(tmp_str);
-        tmp_input_str_is_hangul.push_back(false);
-        tmp_input_str_is_punc.push_back(false);
+        this->word_count += 1;
+        tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+        std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+        input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+
+        tmp_input_str_unicode_is_hangul.push_back(false);
+        tmp_input_str_unicode_is_punc.push_back(false);
     } else if (lang_mode == 2) {
 
     } else { // lang_mode == 3
-        tmp_input_str_per_word.push_back(tmp_str);
-        tmp_input_str_is_hangul.push_back(false);
-        tmp_input_str_is_punc.push_back(true);
+        this->word_count += 1;
+        tmp_input_str_unicode_per_word_vec.resize(tmp_input_str_unicode_per_word.size());
+        std::copy(tmp_input_str_unicode_per_word.begin(), tmp_input_str_unicode_per_word.end(), tmp_input_str_unicode_per_word_vec.begin());
+        input_str_per_word.push_back(tmp_input_str_unicode_per_word_vec);
+
+        tmp_input_str_unicode_is_hangul.push_back(false);
+        tmp_input_str_unicode_is_punc.push_back(true);
+    }
+
+    for (auto i : input_str_per_word) {
+        std::string tmp_str;
+        for (auto j : i) {
+            std::cout << j << " ";
+        }
+        parseSounds::unicodeToUtf8(i, tmp_str);
+        std::cout << tmp_str;
+        std::cout << "\n";
     }
 
     return 0;

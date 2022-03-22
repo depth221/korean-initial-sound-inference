@@ -11,6 +11,7 @@ namespace parseSounds {
 
         for (int i = 0; i < size_of_utf8;) {
             if ((utf8_str[i] & 0x80) == 0x00) { // ~ 7 bits
+                unicode_str.push_back(utf8_str[i]);
                 i += 1;
             } else {
                 if (i == size_of_utf8 - 1) {
